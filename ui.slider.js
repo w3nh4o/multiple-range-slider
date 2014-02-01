@@ -22,6 +22,7 @@
             delay: 0,
             distance: 0,
             handles: null,
+            activeHandle: 0,
             max: 100,
             min: 0,
             orientation: 'horizontal',
@@ -126,6 +127,8 @@
             }
             // call refresh value
             this._refreshValue();
+            
+            this._activateHandle(o.activeHandle);
 
         },
         
@@ -244,10 +247,13 @@
 
             this.handle = this.handles.eq(0);
 
-            this.handles.add(this.range).filter("a")
+            this.handles.filter("a")
             .click(function(event) {
                 event.preventDefault();
-                $(this).addClass('ui-state-active');
+                // activate handle
+                self._activateHandle($(this).attr('data-id'));
+                
+                //$(this).addClass('ui-state-active');
             })
             .hover(function() {
                 $(this).addClass('ui-state-hover');
@@ -337,17 +343,54 @@
 
             });
         },
-        
-        editHandle: function(handle, type) {
-            var self = this, o = this.options;
+        // activate handle
+        _activateHandle: function(index) {
             
-            o.values.push(value);
+            // all handles
+            this.handles = $("a.ui-slider-handle", this.element);
+            // remove active handle indicator
+            $(this.handles).removeClass('ui-state-active');
+            
+            // get the activated handle
+            var handle = $(this.handles).eq(index);
+            // add class
+            handle.addClass('ui-state-active').focus();
+            // get value
+            var value = handle.attr('data-value');
+            // get type
+            var type = handle.attr('data-type');
+            
+            // set active handle
+            this.options.activeHandle = index;
+            
+            // trigger the handleActivated event
+            this._trigger("handleActivated", null, {index: index, value: value, type: type});
         },
         
-        removeHandle: function(handle) {
-            var self = this, o = this.options;
-            
-            o.values.push(value);
+        // edit handle, change handle type
+        editHandle: function(index, type) {
+            // change handle type in options
+            this.options.handles[index].type = type;
+            // refresh handles
+            this._refreshHandles();
+            // refresh values
+            this._refreshValue();
+            // activate handle
+            this._activateHandle(this.options.activeHandle);
+        },
+        
+        // remove handle
+        removeHandle: function(index) {
+            // remove from options
+            this.options.handles.splice(index, 1);
+            // from values
+            this.options.values.splice(index, 1);
+            // remove element
+            this.handles.eq(index).remove();
+            // refresh handles
+            this._refreshHandles();
+            // refresh values
+            this._refreshValue();
         },
 
         destroy: function() {
@@ -417,13 +460,14 @@
 
             self._handleIndex = index;
             
+            this._activateHandle($(closestHandle).attr('data-id'));
+            
             // remove active class for all handles
-            this.handles.removeClass("ui-state-active");
+            /*this.handles.removeClass("ui-state-active");
             // add to closest handle
             closestHandle
             .addClass("ui-state-active")
-            .addClass("active-handle")
-            .focus();
+            .focus();*/
 		
             var offset = closestHandle.offset();
             var mouseOverHandle = !$(event.target).parents().andSelf().is('.ui-slider-handle');
